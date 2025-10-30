@@ -1,8 +1,5 @@
 # Agentic AI Trading Platform: Validation & Self-Optimization Crew
 **Status: Completed Extension (Data Scientist Course)**
-*The diagram below illustrates the new agent-based decision pipeline, emphasizing sequential flow and the configuration update loop.*
-
-![xxxx](xxxx.png)
 
 This extension builds on the original ETL trading platform for commodity futures [ds24_agentic_tradingplatform](https://github.com/mabjq/ds24_agentic_tradingplatform/). It introduces a dynamic multi-agent decision pipeline using CrewAI for self-optimizing strategy parameters, validation, and human oversight. Focus on intraday trading (up to 3 days) with indicators: Gaussian channel (triple EMA 26 ±3ATR), Kijun-Sen 100, VAPI 13 (EMA(closevolume)/EMA(volume)), ADX 14, ATR 14, SMMA 200. Entry: gauss_up + vapi_up + Close > SMMA 200 + ADX >19; Exit: kijun-trendbreak, TP1@2R (partial 30%), ATR*4 trailing. Risk: 1% per trade, max 5/day.
 The pipeline achieves a baseline winrate of ~61.54% (from ETL backtest) and projects optimizations to >71% via scipy.minimize on gaussian_period.
@@ -31,7 +28,7 @@ Five specialized agents form a sequential context-chaining pipeline, where each 
 | **TradeOpt Agent** | Validates full Backtrader run; conditionally optimizes (scipy on gaussian_period 20-40); approves if winrate >0.6. | run_backtest_tool + optimize_params_tool |
 | **User Proxy** | Reviews results; prompts human feedback; formats changes for config update. | human_input_tool |
 
-![Agent Flow](agent_flow.png)  
+![Agent Flow](crewai_flow.png)  
 *Example of sequential flow (Excalidraw diagram).*
 
 ## Technical Implementation Highlights
@@ -98,7 +95,7 @@ The ETL flow is linear for fetching, cleaning, and analyzing KC=F data on 30-min
 
 Run: `python populate_historical.py --days 60` (backfill), then `python -m app.main` (full run). See `results/reports/backtest_summary.csv` for metrics.
 
-![ETL Flow](etl_flow.png)  
+![ETL Flow](etl_trading01.png)  
 *Diagram of ETL flow (Excalidraw).*
 
 ## License
