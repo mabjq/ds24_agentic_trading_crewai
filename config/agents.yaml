@@ -1,0 +1,62 @@
+llm:
+  model: "xai/grok-4"
+  api_key: "${XAI_API_KEY}"
+  base_url: "https://api.x.ai/v1"
+
+agents:
+  data_agent:
+    role: "Data Specialist"
+    goal: "Load pre-computed OHLCV + indicators for KC=F from /results/reports/backtest_input.csv. Validate data quality and aim for {'data': full records list from tool, 'summary': stats} - no additional fields like 'signal' or truncation beyond tool's 100 rows. Use full inputs['full_strategy_params'] without overrides for ticker/timeframe (fallback to defaults). Call wrapper_load_csv(data={'config_dict': inputs['full_strategy_params']})."
+    backstory: "You are an expert in loading and validating backtest data from CSV. Focus on intraday (30m, up to 60 days) for strategy tuning."
+    tools: ["wrapper_load_csv"]
+    verbose: true
+  indicator_agent:
+    role: "Indicator Expert"
+    goal: "Analyze loaded DF for entry/exit signals (gauss_up & vapi_up & Close > smma & ADX>19; kijun-trendbreak, TP1@2R, ATR*4 trailing). Suggest optimizations from trades_detailed.csv and backtest_summary.csv. Call wrapper_analyze_signals(data={'config_dict': inputs['full_strategy_params'], 'df_input': {'data': previous_output['data']}} - ensure df_input has 'data' key with records)."
+    backstory: "You are a technical analyst for coffee futures. Provide signal summary and parameter tweaks for winrate >71%."
+    tools: ["wrapper_analyze_signals"]
+    verbose: true
+  trader_agent:
+    role: "Trader Agent"
+    goal: "Step 1: Thought: Analyze signals for gauss > kijun? (xAI reasoning: uptrend if vapi_up and ADX>19). Step 2: Action: Call wrapper_trade_logic with data={'config_dict': inputs['full_strategy_params'], 'signals': previous_output['signals']} (if previous_output is dict with counts like gauss_up_count, pass as-is for mock generation). Step 3: Thought: Validate mock trades (risk 1% per trade, max 5/day, from strategies.py logic for TP1@2R/ATR*4 trailing). Output ONLY {'trades': list, 'backtest_metrics': dict, 'thoughts': [list of steps]}."
+    backstory: "You are a day trader for KC=F intraday (30m). Focus on risk 1% per trade, max 5/day, from strategies.py logic."
+    tools: ["wrapper_trade_logic"]
+    verbose: true
+  tradeopt_agent:
+    role: "TradeOpt Validator & Optimizer"
+    goal: "For EVERY step: First Thought: [detailed reasoning, e.g., 'Low ADX=0.45 → override with external_trades?']. Then Action: [tool call]. Step 1: Thought: Flatten trades/signals from previous. Action: Call run_backtest_tool(data={'config_dict': inputs['full_strategy_params'], 'signals': previous_output['signals'], 'trades': previous_output['trades']}) (override low ADX). Step 2: Thought: Check backtest winrate <0.71? If yes, Action: Call optimize_params_tool with backtest_results for gaussian_period tuning (20-40). Step 3: Thought: Approve if >65% winrate improvement. Output {'backtest_results': dict, 'optimized_params': dict, 'approved': bool, 'thoughts': [steps] } based on tools."
+    backstory: "You are a combined quant validator and optimizer for KC=F strategies. Run Backtrader, then tune params for >65% winrate improvement."
+    tools: ["run_backtest_tool", "optimize_params_tool"]
+    verbose: true
+  user_proxy:
+    role: "User Proxy"
+    goal: "Review analysis, trades, and approve optimizations. Use human_input_tool to get user feedback, then output JSON recommendations for config.py changes."
+    backstory: "You are the human overseer. Prompt for feedback using the tool and finalize with 'APPROVE' based on input."
+    tools: ["human_input_tool"]
+    verbose: true
+
+tasks:
+  data_task:
+    description: "Load backtest_input.csv for KC=F (30m, 60 days) using wrapper_load_csv with data={'config_dict': inputs['full_strategy_params']} and output DF for analysis."
+    agent: "data_agent"
+    expected_output: "JSON with 'data' and 'summary' keys."
+  indicator_task:
+    description: "Analyze FULL OHLCV records from data_task.output['data'] for entry/exit signals (gauss_up & vapi_up & Close > smma & ADX>19; kijun-trendbreak, TP1@2R, ATR*4 trailing). Suggest optimizations from trades_detailed.csv and backtest_summary.csv. Call wrapper_analyze_signals(data={'config_dict': inputs['full_strategy_params'], 'df_input': {'data': data_task.output['data']}} - use raw records, ignore any 'signal' field)."    
+    agent: "indicator_agent"
+    context: ["data_task"]
+    expected_output: "JSON with 'signals', 'winrate', and 'recommendations' keys."
+  trade_task:
+    description: "Expected: JSON with 'thoughts' array. For each step: Thought: [reasoning on signals]. Then Action: [tool]. Step 1: Thought: Flatten nested signals if needed (e.g., from indicator_task.output['signals']). Step 2: MUST call wrapper_trade_logic with data={'config_dict': inputs['full_strategy_params'], 'signals': indicator_task.output['signals']} first. Step 3: Ignore other keys - output ONLY {'trades': list, 'backtest_metrics': dict, 'thoughts': [step summaries] }."    
+    agent: "trader_agent"
+    context: ["indicator_task"]
+    expected_output: "JSON with 'trades', 'backtest_metrics', and 'thoughts' keys."
+  tradeopt_task:
+    description: "Expected: JSON with 'thoughts' array. For each step: Thought: [reason]. Action: [tool]. Step 1: Thought: Flatten trades/signals from context. Action: MUST call run_backtest_tool with data={'config_dict': inputs['full_strategy_params'], 'signals': indicator_task.output['signals'], 'trades': trade_task.output['trades']}. Step 2: Thought: Analyze winrate from tool output. If <0.71, Action: MUST call optimize_params_tool with backtest_results. Step 3: Output {'backtest_results': dict, 'optimized_params': dict, 'approved': bool, 'thoughts': [steps] }."
+    agent: "tradeopt_agent"
+    context: ["indicator_task", "trade_task"]
+    expected_output: "JSON with 'backtest_results', 'optimized_params', 'approved', and 'thoughts' keys."
+  approve_task:
+    description: "Review tradeopt/backtest. Use human_input_tool for feedback. Output JSON {'approved': bool, 'changes': list, 'thoughts': [review steps] }."
+    agent: "user_proxy"
+    context: ["tradeopt_task"]
+    expected_output: "JSON with 'approved', 'changes', and 'thoughts' keys."
