@@ -9,7 +9,7 @@ This extension transforms the static ETL pipeline into an agentic system capable
 
 ### Shift from Broad Vision to Controlled Development
 - **Original Vision**: Full real-time sentiment integration and auto-apply parameters (using AutoGen).
-- **Final Focus**: Scoped to CrewAI for controlled validation and optimization. Sentiment and auto-apply were deprioritized to ensure stability, provable metrics, and human-in-the-loop safety. Emphasis on bulletproof chaining before high-risk features.
+- **Final Focus**: Scoped to CrewAI for controlled validation and optimization. Sentiment and auto-apply were deprioritized to ensure stability and provable metrics. Emphasis on bulletproof chaining before high-risk features.
 
 ### Core Design Principles (Robustness & Control)
 1. **Dual Validation**: Mock backtest (fast LLM reasoning on ~20 rows) followed by full Backtrader run (quantitative truth on 200+ rows).
@@ -35,32 +35,33 @@ Five specialized agents form a sequential context-chaining pipeline, where each 
 Agents interface directly with the original ETL code, minimizing duplication.
 
 ### Critical Decisions
-- **optimize_params_tool.py**: Använder scipy.minimize för att maximera winrate (-winrate som loss). Körs på tail(200) rader för hastighet; fallback mini-loop vid error.
-- **run_backtest_tool.py**: Full Backtrader med low ADX-override (injektion av external trades); beräknar Sharpe/PnL.
-- **human_input_tool.py**: 30s timeout med signal.alarm; default "APPROVED" för resilience.
-- **Config Chaining**: Global config i agents.py; Pydantic model_copy förhindrar mutationer.
+- **optimize_params_tool.py**: Uses scipy.minimize to maximize winrate (-winrate as loss). Runs on tail(200) rows for speed during iterations; fallback mini-loop if error.
+- **run_backtest_tool.py**: Full Backtrader with low ADX override (inject external trades); computes Sharpe/PnL.
+- **human_input_tool.py**: 30s timeout with signal.alarm; defaults to "APPROVED" for resilience.
+- **Config Chaining**: Global config in agents.py; Pydantic model_copy prevents mutations.
 
 ### Linking to Base ETL Project
-- **Data Source**: Agents laddar CSV från ETL:s backtest_input.csv.
-- **Strategy Code**: Importerar app/strategies.py och app/indicators.py för GaussianKijunStrategy och compute_all_indicators.
+This builds on the stable foundation of the original repo:
+- **Data Source**: Agents load CSV from ETL's backtest_input.csv.
+- **Strategy Code**: Imports app/strategies.py and app/indicators.py for GaussianKijunStrategy and compute_all_indicators.
 
-### Exempelkörning (Case Study)
-I en typisk run (high ADX=0.9, 13 trades):
-- Bas-winrate: 61.54% (mock).
-- Optimerad: 73.2% (gaussian_period=28, PnL +950 USD, Sharpe 1.2).
-- Overrides: 2/13 (low ADX-spots).
-- Thoughts-exempel: "Backtest winrate=0.6154 <0.71, so optimize...".
+### Example Run (Case Study)
+In a typical run (high ADX=0.9, 13 trades):
+- Baseline winrate: 61.54% (mock).
+- Optimized: 73.2% (gaussian_period=28, PnL +950 USD, Sharpe 1.2).
+- Overrides: 2/13 (low ADX spots).
+- Thoughts example: "Backtest winrate=0.6154 <0.71, so optimize...".
 
 ## Quick Start
-**Förutsättning**: Kör bas-ETL för att generera/uppdatera backtest_input.csv med färsk KC=F-data (30m, 60 dagar).
+**Prerequisite**: Run base ETL to generate/update backtest_input.csv with fresh KC=F data (30m, 60 days).
 
 **Installation**:
-1. **Miljö**: Python 3.12 i Ubuntu LXC (Proxmox).
+1. **Environment**: Python 3.12 in Ubuntu LXC (Proxmox).
    - `sudo apt install python3.12 python3-pip`
-2. **Beroenden**: `pip install -r requirements.txt` (crewai, pydantic, scipy, backtrader, yfinance, etc.).
-3. **Databas**: Kör `python -m app.main` för init.
+2. **Dependencies**: `pip install -r requirements.txt` (crewai, pydantic, scipy, backtrader, yfinance, etc.).
+3. **Database**: Run `python -m app.main` for init.
 
-**Kör Crew**:
+**Run Crew:**:
 ```bash
 python app/agents.py  # End-to-end (with human input)
 ```
@@ -80,7 +81,7 @@ ai_trading_platform/
 │   ├── optimize_params.py # Scipy opt + fallback
 │   └── human_input.py   # Human feedback with timeout
 ├── tests/               # Pytest suite (>80% coverage)
-├── results/reports/     # Outputs (backtest_summary.csv, daily_report.json)
+├── results/reports/     # Outputs (backtest_summary.csv)
 ├── requirements.txt     # Dependencies
 └── README.md            # This file
 ```
