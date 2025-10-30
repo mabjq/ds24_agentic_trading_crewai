@@ -5,7 +5,7 @@ This extension builds on the original ETL trading platform for commodity futures
 The pipeline achieves a baseline winrate of ~61.54% (from ETL backtest) and projects optimizations to >71% via scipy.minimize on gaussian_period.
 
 ## Project Overview
-This extension transforms the static ETL pipeline into an agentic system capable of validating trades, running mock/full backtests, and conditionally optimizing parameters (e.g., gaussian_period) for improved performance. Key innovation: A merged "TradeOpt" agent combines backtest validation and optimization to reduce redundancy and risks in CrewAI.
+This extension transforms the static ETL pipeline into an agentic system capable of validating trades, running mock/full backtests, and conditionally optimizing parameters (e.g., gaussian_period) for improved performance. 
 
 ### Shift from Broad Vision to Controlled Development
 - **Original Vision**: Full real-time sentiment integration and auto-apply parameters (using AutoGen).
