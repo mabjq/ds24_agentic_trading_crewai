@@ -1,5 +1,4 @@
 # Agentic AI Trading Platform: Validation & Self-Optimization Crew
-**Status: Completed Extension (Data Scientist Course)**
 
 This extension builds on the original ETL trading platform for commodity futures [ds24_agentic_tradingplatform](https://github.com/mabjq/ds24_agentic_tradingplatform/). It introduces a dynamic multi-agent decision pipeline using CrewAI for self-optimizing strategy parameters, validation, and human oversight. Focus on intraday trading (up to 3 days) with indicators: Gaussian channel (triple EMA 26 ±3ATR), Kijun-Sen 100, VAPI 13 (EMA(closevolume)/EMA(volume)), ADX 14, ATR 14, SMMA 200. Entry: gauss_up + vapi_up + Close > SMMA 200 + ADX >19; Exit: kijun-trendbreak, TP1@2R (partial 30%), ATR*4 trailing. Risk: 1% per trade, max 5/day.
 The pipeline achieves a baseline winrate of ~61.54% (from ETL backtest) and projects optimizations to >71% via scipy.minimize on gaussian_period.
