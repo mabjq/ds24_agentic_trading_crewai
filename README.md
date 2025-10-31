@@ -28,7 +28,7 @@ Five specialized agents form a sequential context-chaining pipeline, where each 
 | **User Proxy** | Reviews results; prompts human feedback; formats changes for config update. | human_input_tool |
 
 ![Agent Flow](crewai_flow.png)  
-*Example of sequential flow (Excalidraw diagram).*
+*Sequential flow (Excalidraw diagram).*
 
 ## Technical Implementation Highlights
 Agents interface directly with the original ETL code, minimizing duplication.
@@ -65,7 +65,7 @@ In a typical run (high ADX=0.9, 13 trades):
 python app/agents.py  # End-to-end (with human input)
 ```
 
-**Human Approval: Pipeline pauses at User Proxy for input (e.g., "y" to approve changes like gaussian_period=28).
+**Human Approval**: Pipeline pauses at User Proxy for input (e.g., "y" to approve changes like gaussian_period=28).
 
 ## Project Structure
 ```
